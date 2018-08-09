@@ -1,0 +1,17 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Sat May 19 01:06:05 2018
+
+@author: yangyang
+"""
+
+
+S = tf.placeholder(tf.int32, shape=[None,None,27],name="Story")
+Q = tf.placeholder(tf.int32, shape=[None,27],name="Question")
+A = tf.placeholder(tf.int32, shape=[None,4],name="Answer")
+learning_rate = tf.placeholder(tf.float32, [], name="learning_rate")
+feed_dict = {S: s, Q: q, A: a, learning_rate: lr}
+
+with tf.Session() as sess:
+    sess.run(feed_dict = {S: s, Q: q, A: a, learning_rate: lr})

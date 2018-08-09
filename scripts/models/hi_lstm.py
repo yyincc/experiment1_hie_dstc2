@@ -177,21 +177,21 @@ class hierarchical_lstm():
                                     swap_memory=True)          #Shape: [None x story_len, num_units]
         bi_word_outputs=tf.concat(bi_word_outputs, -1)
         
-        score_=tf.layers.dense(bi_word_outputs,activation=tf.tanh, units=100,name='www')
-        score=tf.layers.dense(score_, units=1,activation=None,use_bias=False,name='vvv')
-        self.masked=mask_2d(score[:,:,0],self.sent_length,-np.inf)
-        self.att= mask_2d(attention_softmax2d(self.masked),self.sent_length,0)
-        sent_inputs=tf.matmul(tf.transpose(bi_word_outputs,[0,2,1]),tf.expand_dims(self.att,2))[:,:,0]
-        sent_inputs=tf.reshape(sent_inputs,([self.batch_size,self.sent_numb,self.encoder_hidden_units*2]))
+#        score_=tf.layers.dense(bi_word_outputs,activation=tf.tanh, units=100,name='www')
+#        score=tf.layers.dense(score_, units=1,activation=None,use_bias=False,name='vvv')
+#        self.masked=mask_2d(score[:,:,0],self.sent_length,-np.inf)
+#        self.att= mask_2d(attention_softmax2d(self.masked),self.sent_length,0)
+#        sent_inputs=tf.matmul(tf.transpose(bi_word_outputs,[0,2,1]),tf.expand_dims(self.att,2))[:,:,0]
+#        sent_inputs=tf.reshape(sent_inputs,([self.batch_size,self.sent_numb,self.encoder_hidden_units*2]))
+#        
+#        
         
-        
-        
-#        bi_word_state=(tf.concat([bi_word_state[0][0],bi_word_state[1][0]],-1),tf.concat([bi_word_state[0][1],bi_word_state[1][1]],-1))
-#        sent_inputs=tf.contrib.rnn.LSTMStateTuple(tf.reshape(bi_word_state[0],[self.batch_size,self.sent_numb,self.encoder_hidden_units*2]),
-#                                                   tf.reshape(bi_word_state[1],[self.batch_size,self.sent_numb,self.encoder_hidden_units*2]))     #Shape: [None , story_len, 2*num_units]
+        bi_word_state=(tf.concat([bi_word_state[0][0],bi_word_state[1][0]],-1),tf.concat([bi_word_state[0][1],bi_word_state[1][1]],-1))
+        sent_inputs=tf.contrib.rnn.LSTMStateTuple(tf.reshape(bi_word_state[0],[self.batch_size,self.sent_numb,self.encoder_hidden_units*2]),
+                                                   tf.reshape(bi_word_state[1],[self.batch_size,self.sent_numb,self.encoder_hidden_units*2]))     #Shape: [None , story_len, 2*num_units]
 
 
-        sinputs=tf.nn.dropout(sent_inputs,self.dropout)
+        sinputs=tf.nn.dropout(sent_inputs[1],self.dropout)
         self.story_length = self.get_story_length()
         sent_cell=tf.contrib.rnn.BasicLSTMCell(self.encoder_hidden_units*2)
         sent_outputs, sent_state=tf.nn.dynamic_rnn(sent_cell,
@@ -203,9 +203,14 @@ class hierarchical_lstm():
         #logits_atm=tf.layers.dense(sent_state, units=self.num_atm)
         
         sent_s=tf.nn.dropout(sent_state[1],self.dropout)
-        logits_cui=tf.layers.dense(sent_s, units=self.num_cui,name='c')
-        logits_loc=tf.layers.dense(sent_s, units=self.num_loc,name='l')
-        logits_pri=tf.layers.dense(sent_s, units=self.num_pri,name='pr')
+        
+        logits_cuii=tf.layers.dense(sent_s, units=100,name='cc')
+        logits_locc=tf.layers.dense(sent_s, units=100,name='ll')
+        logits_prii=tf.layers.dense(sent_s, units=100,name='prr')
+
+        logits_cui=tf.layers.dense(logits_cuii, units=self.num_cui,name='c')
+        logits_loc=tf.layers.dense(logits_locc, units=self.num_loc,name='l')
+        logits_pri=tf.layers.dense(logits_prii, units=self.num_pri,name='pr')
 
     
 

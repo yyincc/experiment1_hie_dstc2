@@ -32,7 +32,7 @@ def del_all_flags(FLAGS):
 del_all_flags(tf.flags.FLAGS)
 os.environ['TF_CPP_MIN_LOG_LEVEL']='2'
 # Task
-tf.flags.DEFINE_boolean("resetparam", False, "resetparam")
+tf.flags.DEFINE_boolean("resetparam", True, "resetparam")
 
 
 tf.flags.DEFINE_string("main_task", 'slot_tracking', "slot_tracking,action_chosen,both")
@@ -78,8 +78,7 @@ FLAGS = tf.flags.FLAGS
 session_config = tf.ConfigProto(log_device_placement=False, allow_soft_placement=True)
 session_config.gpu_options.per_process_gpu_memory_fraction = 0.90
 
-inputtaskfile, taskchosen, officialtestfile = get_taskfile_db(taskchosen=FLAGS.task, testset=FLAGS.testset, temp_path=FLAGS.temp_path)
-
+taskchosen='2'
 # create dircotory
 if not os.path.exists(FLAGS.model_path): os.mkdir(FLAGS.model_path)
 if not os.path.exists(FLAGS.model_path+'{}/'.format(taskchosen)): os.mkdir(FLAGS.model_path+'{}/'.format(taskchosen))
@@ -409,11 +408,3 @@ with tf.Session(config=session_config) as sess:
         print ('>> restoring checkpoint from', ckpt)
         model.saver.restore(model._sess, ckpt)
 
-    # Testing 
-    test=utils.load_test(officialtestfile,FLAGS)
-    testS, testQ, testA, testID = utils.vectorize_data(test, word_idx, sentence_size, FLAGS.batch_size, memory_size, cand_idx)
-    test_labels = np.array(testA)
-    test_preds, test_preds_prob, test_loss = utils.batch_evaluate(model, testS, testQ, testA, len(test), batch_size) 
-    test_acc = metrics.accuracy_score(test_preds==test_labels,np.ones((len(test),5)))
-    print ('-----------------------')
-    print ('test Loss:', test_loss, 'test Acc Model:', test_acc)

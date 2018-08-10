@@ -228,7 +228,7 @@ class hierarchical_lstm():
                                                    tf.reshape(bi_word_state[1],[self.batch_size,self.sent_numb,self.encoder_hidden_units*2]))     #Shape: [None , story_len, 2*num_units]
 
 
-        sinputs=tf.nn.dropout(sent_inputs[1],self.dropout)
+        sinputs=tf.nn.dropout(sent_inputs[1],1)
         self.story_length = self.get_story_length()
         sent_cell=tf.contrib.rnn.BasicLSTMCell(self.encoder_hidden_units*2)
         sent_outputs, sent_state=tf.nn.dynamic_rnn(sent_cell,

@@ -305,7 +305,7 @@ def tokenize(sent):
     return result
 
 def vectorize_data(data, word_idx, sentence_size, batch_size, memory_size, cand_idx,FLAGS):
-    S, A = [], []
+    S, A ,Label= [], [], []
     for i, d in enumerate(data):
         story, answer = d['utterances'], d['goal']
         ss = []
@@ -327,15 +327,30 @@ def vectorize_data(data, word_idx, sentence_size, batch_size, memory_size, cand_
         for _ in range(lm):
             ss.append([0] * sentence_size)         
 
-
+        y=[]
+        for i in range(len(answer)):
+            
+            y .append([cand_idx[0][answer[i]['area']],cand_idx[1][answer[i]['food']],cand_idx[2][answer[i]['price range']]])
+        for _ in range(max(0, memory_size - len(answer))):
+            y.append([0,0,0])   
+        
         if len(answer):
-            y = [cand_idx[0][answer[-1]['area']],cand_idx[1][answer[-1]['food']],cand_idx[2][answer[-1]['price range']]]
+            
+            label = [cand_idx[0][answer[-1]['area']],cand_idx[1][answer[-1]['food']],cand_idx[2][answer[-1]['price range']]]
         else:
-            y = 0
+            label = 0
 
         S.append(ss)
         A.append(y)
-    return S,  A
+        Label.append(label)
+#        if len(answer):
+#            y = [cand_idx[0][answer[-1]['area']],cand_idx[1][answer[-1]['food']],cand_idx[2][answer[-1]['price range']]]
+#        else:
+#            y = 0
+#
+#        S.append(ss)
+#        A.append(y)
+    return S,  A ,Label
 
 def vectorize_candidates(cand_idx, idx_cand, word_idx, sentence_size):
     C=[]
@@ -459,11 +474,11 @@ def batch_evaluate(model, S, A, n_data, eval_batch):
             losses += loss
         else:
             pred = model.predict(s)  
-        preds_prob += list(model.predict_proba(s))
+#        preds_prob += list(model.predict_proba(s))
         preds =np.concatenate((preds,pred),0) 
         
         preds_cui =np.concatenate((preds_cui,pred_cui[:,None]),0) 
         preds_loc =np.concatenate((preds_loc,pred_loc[:,None]),0) 
         preds_pri =np.concatenate((preds_pri,pred_pri[:,None]),0) 
-    return preds, preds_prob, losses/(n_data/eval_batch),preds_cui,preds_loc,preds_pri
+    return preds, 0, losses/(n_data/eval_batch),preds_cui,preds_loc,preds_pri
 

@@ -70,7 +70,7 @@ class hierarchical_lstm():
         ## setup placeholder
         self.S = tf.placeholder(tf.int32, shape=[None,None,self.sent_len],name="Story")
         self.Q = tf.placeholder(tf.int32, shape=[None,self.sent_len],name="Question")
-        self.A = tf.placeholder(tf.int32, shape=[None,3],name="Answer")
+        self.A = tf.placeholder(tf.int32, shape=[None,self.sent_numb,3],name="Answer")
         self.dropout=tf.placeholder(tf.float32, [], 'dropout')
         self.visualization = False
         
@@ -98,13 +98,15 @@ class hierarchical_lstm():
         self.train_op = self.train()
 
         self.saver = tf.train.Saver(max_to_keep=5)
+        
+        ind=tf.stack([tf.range(self.batch_size),self.story_length-1],-1)
+        last_A=tf.gather_nd(self.A,ind)
+        
+        self.correct_prediction_cui = tf.equal(tf.argmax(tf.gather_nd(self.logits_cui,ind), 1,output_type=tf.int32),last_A[:,1])
+        self.correct_prediction_loc = tf.equal(tf.argmax(tf.gather_nd(self.logits_loc,ind), 1,output_type=tf.int32),last_A[:,0])
+        self.correct_prediction_pri = tf.equal(tf.argmax(tf.gather_nd(self.logits_pri,ind), 1,output_type=tf.int32),last_A[:,2])
 
-        # Create operations for computing the accuracy
-        self.correct_prediction_cui = tf.equal(tf.argmax(self.logits_cui, 1,output_type=tf.int32),self.A[:,1])
-        self.correct_prediction_loc = tf.equal(tf.argmax(self.logits_loc, 1,output_type=tf.int32),self.A[:,0])
-        self.correct_prediction_pri = tf.equal(tf.argmax(self.logits_pri, 1,output_type=tf.int32),self.A[:,2])
-
-        self.correct_prediction = tf.reduce_all([self.correct_prediction_loc,self.correct_prediction_cui,self.correct_prediction_pri])
+        self.correct_prediction = tf.reduce_all([self.correct_prediction_loc,self.correct_prediction_cui,self.correct_prediction_pri],0)
         #tf.equal([tf.argmax(self.logits_cui, 1,output_type=tf.int32),tf.argmax(self.logits_loc, 1,output_type=tf.int32),tf.argmax(self.logits_peo, 1,output_type=tf.int32),tf.argmax(self.logits_pri, 1,output_type=tf.int32)],self.A)
 
         self.accuracy_cui = tf.reduce_mean(tf.cast(self.correct_prediction_cui, tf.float32), name="Accuracy_cui")
@@ -115,34 +117,69 @@ class hierarchical_lstm():
 
         
         # predict op 
-        predict_op_cui = tf.argmax(self.logits_cui, 1, name="predict_op_cui")
-        predict_op_loc = tf.argmax(self.logits_loc, 1, name="predict_op_loc")
-        predict_op_pri = tf.argmax(self.logits_pri, 1, name="predict_op_pri")
+        predict_op_cui = tf.argmax(tf.gather_nd(self.logits_cui,ind), 1, name="predict_op_cui")
+        predict_op_loc = tf.argmax(tf.gather_nd(self.logits_loc,ind), 1, name="predict_op_loc")
+        predict_op_pri = tf.argmax(tf.gather_nd(self.logits_pri,ind), 1, name="predict_op_pri")
         
-        predict_proba_op_cui = tf.nn.softmax(self.logits_cui, name="predict_proba_op_cui")
-        predict_proba_op_loc = tf.nn.softmax(self.logits_loc, name="predict_proba_op_loc")
-        predict_proba_op_pri = tf.nn.softmax(self.logits_pri, name="predict_proba_op_pri")
-        
-        predict_log_proba_op_cui = tf.log(predict_proba_op_cui, name="predict_log_proba_op_cui")
-        predict_log_proba_op_loc = tf.log(predict_proba_op_loc, name="predict_log_proba_op_loc")
-        predict_log_proba_op_pri = tf.log(predict_proba_op_pri, name="predict_log_proba_op_pri")
-        
+#        predict_proba_op_cui = tf.nn.softmax(self.logits_cui, name="predict_proba_op_cui")
+#        predict_proba_op_loc = tf.nn.softmax(self.logits_loc, name="predict_proba_op_loc")
+#        predict_proba_op_pri = tf.nn.softmax(self.logits_pri, name="predict_proba_op_pri")
+#        
+#        predict_log_proba_op_cui = tf.log(predict_proba_op_cui, name="predict_log_proba_op_cui")
+#        predict_log_proba_op_loc = tf.log(predict_proba_op_loc, name="predict_log_proba_op_loc")
+#        predict_log_proba_op_pri = tf.log(predict_proba_op_pri, name="predict_log_proba_op_pri")
+#        
 
         self.predict_op_cui = predict_op_cui
         self.predict_op_loc = predict_op_loc
         self.predict_op_pri = predict_op_pri
         self.predict_op=tf.stack([predict_op_loc,predict_op_cui,predict_op_pri],1)
         
-        
-        self.predict_proba_op_cui = tf.pad(predict_proba_op_cui,tf.constant([[0, 0,], [0, 93-self.num_cui]]))
-        self.predict_proba_op_loc = tf.pad(predict_proba_op_loc,tf.constant([[0, 0,], [0, 93-self.num_loc]]))
-        self.predict_proba_op_pri = tf.pad(predict_proba_op_pri,tf.constant([[0, 0,], [0, 93-self.num_pri]]))
-        self.predict_proba_op=tf.stack([self.predict_proba_op_cui,self.predict_proba_op_loc,self.predict_proba_op_pri],1)
-        
-        self.predict_log_proba_op_cui = tf.pad(predict_log_proba_op_cui,tf.constant([[0, 0,], [0, 93-self.num_cui]]))
-        self.predict_log_proba_op_loc = tf.pad(predict_log_proba_op_loc,tf.constant([[0, 0,], [0, 93-self.num_loc]]))
-        self.predict_log_proba_op_pri = tf.pad(predict_log_proba_op_pri,tf.constant([[0, 0,], [0, 93-self.num_pri]]))
-        self.predict_log_proba_op=tf.stack([self.predict_log_proba_op_cui,self.predict_log_proba_op_loc,self.predict_log_proba_op_pri],1)
+
+        # Create operations for computing the accuracy
+#        self.correct_prediction_cui = tf.equal(tf.argmax(self.logits_cui, 1,output_type=tf.int32),self.A[:,1])
+#        self.correct_prediction_loc = tf.equal(tf.argmax(self.logits_loc, 1,output_type=tf.int32),self.A[:,0])
+#        self.correct_prediction_pri = tf.equal(tf.argmax(self.logits_pri, 1,output_type=tf.int32),self.A[:,2])
+#
+#        self.correct_prediction = tf.reduce_all([self.correct_prediction_loc,self.correct_prediction_cui,self.correct_prediction_pri])
+#        #tf.equal([tf.argmax(self.logits_cui, 1,output_type=tf.int32),tf.argmax(self.logits_loc, 1,output_type=tf.int32),tf.argmax(self.logits_peo, 1,output_type=tf.int32),tf.argmax(self.logits_pri, 1,output_type=tf.int32)],self.A)
+#
+#        self.accuracy_cui = tf.reduce_mean(tf.cast(self.correct_prediction_cui, tf.float32), name="Accuracy_cui")
+#        self.accuracy_loc = tf.reduce_mean(tf.cast(self.correct_prediction_loc, tf.float32), name="Accuracy_loc")
+#        self.accuracy_pri = tf.reduce_mean(tf.cast(self.correct_prediction_pri, tf.float32), name="Accuracy_pri")
+#
+#        self.accuracy = tf.reduce_mean(tf.cast(self.correct_prediction, tf.float32), name="Accuracy")
+#
+#        
+#        # predict op 
+#        predict_op_cui = tf.argmax(self.logits_cui, 1, name="predict_op_cui")
+#        predict_op_loc = tf.argmax(self.logits_loc, 1, name="predict_op_loc")
+#        predict_op_pri = tf.argmax(self.logits_pri, 1, name="predict_op_pri")
+#        
+#        predict_proba_op_cui = tf.nn.softmax(self.logits_cui, name="predict_proba_op_cui")
+#        predict_proba_op_loc = tf.nn.softmax(self.logits_loc, name="predict_proba_op_loc")
+#        predict_proba_op_pri = tf.nn.softmax(self.logits_pri, name="predict_proba_op_pri")
+#        
+#        predict_log_proba_op_cui = tf.log(predict_proba_op_cui, name="predict_log_proba_op_cui")
+#        predict_log_proba_op_loc = tf.log(predict_proba_op_loc, name="predict_log_proba_op_loc")
+#        predict_log_proba_op_pri = tf.log(predict_proba_op_pri, name="predict_log_proba_op_pri")
+#        
+#
+#        self.predict_op_cui = predict_op_cui
+#        self.predict_op_loc = predict_op_loc
+#        self.predict_op_pri = predict_op_pri
+#        self.predict_op=tf.stack([predict_op_loc,predict_op_cui,predict_op_pri],1)
+#        
+#        
+#        self.predict_proba_op_cui = tf.pad(predict_proba_op_cui,tf.constant([[0, 0,], [0, 93-self.num_cui]]))
+#        self.predict_proba_op_loc = tf.pad(predict_proba_op_loc,tf.constant([[0, 0,], [0, 93-self.num_loc]]))
+#        self.predict_proba_op_pri = tf.pad(predict_proba_op_pri,tf.constant([[0, 0,], [0, 93-self.num_pri]]))
+#        self.predict_proba_op=tf.stack([self.predict_proba_op_cui,self.predict_proba_op_loc,self.predict_proba_op_pri],1)
+#        
+#        self.predict_log_proba_op_cui = tf.pad(predict_log_proba_op_cui,tf.constant([[0, 0,], [0, 93-self.num_cui]]))
+#        self.predict_log_proba_op_loc = tf.pad(predict_log_proba_op_loc,tf.constant([[0, 0,], [0, 93-self.num_loc]]))
+#        self.predict_log_proba_op_pri = tf.pad(predict_log_proba_op_pri,tf.constant([[0, 0,], [0, 93-self.num_pri]]))
+#        self.predict_log_proba_op=tf.stack([self.predict_log_proba_op_cui,self.predict_log_proba_op_loc,self.predict_log_proba_op_pri],1)
 
         parameters = self.count_parameters()
         logging.info('Parameters: {}'.format(parameters))
@@ -200,17 +237,14 @@ class hierarchical_lstm():
                                     dtype = tf.float32,
                                     swap_memory=True)
 
-        #logits_atm=tf.layers.dense(sent_state, units=self.num_atm)
-        
-        sent_s=tf.nn.dropout(sent_state[1],self.dropout)
-        
-        logits_cuii=tf.layers.dense(sent_s, units=100,name='cc')
-        logits_locc=tf.layers.dense(sent_s, units=100,name='ll')
-        logits_prii=tf.layers.dense(sent_s, units=100,name='prr')
-
-        logits_cui=tf.layers.dense(logits_cuii, units=self.num_cui,name='c')
-        logits_loc=tf.layers.dense(logits_locc, units=self.num_loc,name='l')
-        logits_pri=tf.layers.dense(logits_prii, units=self.num_pri,name='pr')
+        sent_s=tf.nn.dropout(sent_outputs,1)
+        logits_cui=tf.layers.dense(sent_s, units=self.num_cui,name='c')
+        logits_loc=tf.layers.dense(sent_s, units=self.num_loc,name='l')
+        logits_pri=tf.layers.dense(sent_s, units=self.num_pri,name='pr')        
+#        sent_s=tf.nn.dropout(sent_state[1],self.dropout)
+#        logits_cui=tf.layers.dense(sent_s, units=self.num_cui,name='c')
+#        logits_loc=tf.layers.dense(sent_s, units=self.num_loc,name='l')
+#        logits_pri=tf.layers.dense(sent_s, units=self.num_pri,name='pr')
 
     
 
@@ -221,10 +255,13 @@ class hierarchical_lstm():
         """
         Build loss computation - softmax cross-entropy between logits, and correct answer.
         """
-        #cross_entropy_atm = tf.tf.nn.sparse_softmax_cross_entropy_with_logits(logits=self.logits_atm, labels=self.A[], name="cross_entropy_atm")
-        cross_entropy_cui = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=self.logits_cui, labels=self.A[:,1], name="cross_entropy_cui")
-        cross_entropy_loc = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=self.logits_loc, labels=self.A[:,0], name="cross_entropy_loc")
-        cross_entropy_pri = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=self.logits_pri, labels=self.A[:,2], name="cross_entropy_pri")
+        cross_entropy_cui=tf.contrib.seq2seq.sequence_loss(logits=self.logits_cui,targets=self.A[:,:,1],weights=tf.cast(tf.sequence_mask(self.story_length,self.sent_numb),dtype=tf.float32), name="cross_entropy_cui")
+        cross_entropy_loc = tf.contrib.seq2seq.sequence_loss(logits=self.logits_loc,targets=self.A[:,:,0],weights=tf.cast(tf.sequence_mask(self.story_length,self.sent_numb),dtype=tf.float32),  name="cross_entropy_loc")
+        cross_entropy_pri = tf.contrib.seq2seq.sequence_loss(logits=self.logits_pri,targets=self.A[:,:,2],weights=tf.cast(tf.sequence_mask(self.story_length,self.sent_numb),dtype=tf.float32),  name="cross_entropy_pri")
+
+#        cross_entropy_cui = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=self.logits_cui, labels=self.A[:,1], name="cross_entropy_cui")
+#        cross_entropy_loc = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=self.logits_loc, labels=self.A[:,0], name="cross_entropy_loc")
+#        cross_entropy_pri = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=self.logits_pri, labels=self.A[:,2], name="cross_entropy_pri")
         cross_entropy_sum = tf.reduce_mean([cross_entropy_cui,cross_entropy_loc,cross_entropy_pri], name="cross_entropy_sum")
         print(cross_entropy_cui)
        # self.loss_cui,self.loss_loc,self.loss_peo,self.loss_pri = tf.reduce_sum(cross_entropy_cui),tf.reduce_sum(cross_entropy_loc),tf.reduce_sum(cross_entropy_peo),tf.reduce_sum(cross_entropy_pri)

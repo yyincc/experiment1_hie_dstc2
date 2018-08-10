@@ -43,12 +43,12 @@ tf.flags.DEFINE_boolean("all_utter", False, "False for only use bot utterances "
 # Parameters
 tf.flags.DEFINE_float("learning_rate", 0.001, "Learning rate for SGD.")
 tf.flags.DEFINE_float("anneal_rate", 10, "Number of epochs between halving the learnign rate.")
-tf.flags.DEFINE_float("dp", 0.5, "dropout")
+tf.flags.DEFINE_float("dp", 0.7, "dropout")
 tf.flags.DEFINE_float("anneal_stop_epoch", 40, "Epoch number to end annealed lr schedule.")
 tf.flags.DEFINE_float("max_grad_norm", 40, "Clip gradients to this norm.")
 tf.flags.DEFINE_integer("evaluation_interval", 1, "Evaluate and print results every x epochs")
 tf.flags.DEFINE_integer("batch_size", 16, "Batch size for training.")
-tf.flags.DEFINE_integer("encoder_hidden_units", 128, "Number of encoder_hidden_units")
+tf.flags.DEFINE_integer("encoder_hidden_units", 150, "Number of encoder_hidden_units")
 tf.flags.DEFINE_integer("epochs", 30, "Number of epochs to train for.")
 tf.flags.DEFINE_integer("embedding_size", 300, "Embedding size for embedding matrices.")
 tf.flags.DEFINE_integer("memory_size", 100, "Maximum size of memory.")
@@ -272,10 +272,10 @@ if FLAGS.resetparam:
 #        loaded_embeddings=utils.loadEmbedding_rand(None, word_idx,True)        
 
     # vectorize data
-    trainS, trainA = utils.vectorize_data(train, word_idx, sentence_size, FLAGS.batch_size, memory_size, cand_idx,FLAGS)
-    valS,  valA= utils.vectorize_data(val, word_idx, sentence_size, FLAGS.batch_size, memory_size, cand_idx,FLAGS)
-    testS,  testA= utils.vectorize_data(test, word_idx, sentence_size, FLAGS.batch_size, memory_size, cand_idx,FLAGS)
-    testasrS,  testasrA= utils.vectorize_data(testasr, word_idx, sentence_size, FLAGS.batch_size, memory_size, cand_idx,FLAGS)
+    trainS, trainA,train_label = utils.vectorize_data(train, word_idx, sentence_size, FLAGS.batch_size, memory_size, cand_idx,FLAGS)
+    valS,  valA,val_label= utils.vectorize_data(val, word_idx, sentence_size, FLAGS.batch_size, memory_size, cand_idx,FLAGS)
+    testS,  testA,test_label= utils.vectorize_data(test, word_idx, sentence_size, FLAGS.batch_size, memory_size, cand_idx,FLAGS)
+    testasrS,  testasrA,testasr_label= utils.vectorize_data(testasr, word_idx, sentence_size, FLAGS.batch_size, memory_size, cand_idx,FLAGS)
     
     
     f_param = open(FLAGS.model_path+'param','wb')
@@ -327,7 +327,7 @@ with tf.Session(config=session_config) as sess:
             random.shuffle(dialog)
             trainS,trainA=zip(*dialog)
 
-            train_labels, val_labels,test_labels,testasr_labels = trainA, np.array(valA),np.array(testA),np.array(testasrA)
+            train_labels, val_labels,test_labels,testasr_labels = trainA, np.array(val_label),np.array(test_label),np.array(testasr_label)
             total_cost,total_acc,index_bat = 0.0, 0.0, 0
          #   total_cost_cui=0
             prog_bar = tqdm(batches)

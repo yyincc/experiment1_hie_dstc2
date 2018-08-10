@@ -453,7 +453,7 @@ def shuffle_array(shuffle_array_list, shuffle_idx):
         shuffle_array = shuffle_array[shuffle_idx]
 
 def batch_evaluate(model, S, A, n_data, eval_batch):
-    preds = np.empty((0,len(A[0])),dtype=int)
+    preds = np.empty((0,3),dtype=int)
     
     preds_cui = np.empty((0,1),dtype=int)
     preds_loc = np.empty((0,1),dtype=int)

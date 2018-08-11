@@ -260,16 +260,16 @@ if FLAGS.resetparam:
     memory_size = min(FLAGS.memory_size, max_story_size)
     loaded_embeddings=None
     
-    word_idx=pkl.load(open('word_idx.pkl','rb'))
-    loaded_embeddings=pkl.load(open('loaded_embeddings.pkl','rb'))
+#    word_idx=pkl.load(open('word_idx.pkl','rb'))
+#    loaded_embeddings=pkl.load(open('loaded_embeddings.pkl','rb'))
     
     
-#    if FLAGS.word2vec:
-#        loaded_embeddings = utils.loadEmbedding_rand('/Users/yangyang/Dialog project/yy-dstc6/scripts/GoogleNews-vectors-negative300.bin', word_idx,True)
-#    if FLAGS.paragram:
-#        loaded_embeddings = utils.loadEmbedding_rand('/Users/yangyang/Dialog project/yy-dstc6/scripts/paragram999.txt', word_idx,False)
-#    else:
-#        loaded_embeddings=utils.loadEmbedding_rand(None, word_idx,True)        
+    if FLAGS.word2vec:
+        loaded_embeddings = utils.loadEmbedding_rand('/Users/yangyang/Dialog project/yy-dstc6/scripts/GoogleNews-vectors-negative300.bin', word_idx,True)
+    if FLAGS.paragram:
+        loaded_embeddings = utils.loadEmbedding_rand('/Users/yangyang/Dialog project/yy-dstc6/scripts/paragram999.txt', word_idx,False)
+    else:
+        loaded_embeddings=utils.loadEmbedding_rand(None, word_idx,True)        
 
     # vectorize data
     trainS, trainA,train_label = utils.vectorize_data(train, word_idx, sentence_size, FLAGS.batch_size, memory_size, cand_idx,FLAGS)
